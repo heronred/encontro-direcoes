@@ -12,14 +12,22 @@ interface EventListProps {
 
 export default function EventDashboard({ events }: EventListProps) {
   const [selectedDate, setSelectedDate] = useState<string>('');
-  const [now, setNow] = useState(new Date());
+
+  const getNowSP = () => {
+    const now = new Date();
+    const spOffset = -3 * 60;
+    const localOffset = now.getTimezoneOffset();
+    const diff = (localOffset + spOffset) * 60 * 1000;
+    return new Date(now.getTime() - diff);
+  };
+
+  const [now, setNow] = useState(getNowSP());
 
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 60000); // Update every minute
+    const timer = setInterval(() => setNow(getNowSP()), 60000);
     return () => clearInterval(timer);
   }, []);
 
-  // Filter unique dates from events
   const availableDates = Array.from(new Set(events.map(e => e.dateTime.split('T')[0]))).sort();
 
   useEffect(() => {
@@ -30,24 +38,34 @@ export default function EventDashboard({ events }: EventListProps) {
 
   const filteredEvents = events.filter(e => e.dateTime.startsWith(selectedDate));
 
-  // Determine highlights (top 3 upcoming events)
-  const upcomingEvents = [...events]
-    .filter(e => isAfter(parseISO(e.dateTime), now))
-    .sort((a, b) => parseISO(a.dateTime).getTime() - parseISO(b.dateTime).getTime())
-    .slice(0, 3);
+  const sortedEvents = [...events].sort(
+    (a, b) => new Date(a.dateTime + '-03:00').getTime() - new Date(b.dateTime + '-03:00').getTime()
+  );
+
+  const getEventEnd = (dateTime: string): Date => {
+    const currentIndex = sortedEvents.findIndex(e => e.dateTime === dateTime);
+    const nextEvent = sortedEvents[currentIndex + 1];
+    if (nextEvent) {
+      return new Date(nextEvent.dateTime + '-03:00');
+    }
+    const end = new Date(dateTime + '-03:00');
+    end.setHours(end.getHours() + 2);
+    return end;
+  };
 
   const getStatusLabel = (dateTime: string, location: string) => {
-    const eventTime = parseISO(dateTime);
+    const eventTime = new Date(dateTime + '-03:00');
+    const eventEnd = getEventEnd(dateTime);
     const diffInMinutes = (eventTime.getTime() - now.getTime()) / 60000;
+    const isHappening = now >= eventTime && now < eventEnd;
 
-    if (diffInMinutes <= 0 && diffInMinutes > -60) { // Assuming typical event length 60m
+    if (isHappening) {
       return `Agora no ${location}`;
     }
     if (diffInMinutes > 0 && diffInMinutes <= 60) {
       return `Em ${Math.round(diffInMinutes)} minutos`;
     }
-    
-    // Check if it's many days away
+
     const daysDiff = Math.ceil(diffInMinutes / (60 * 24));
     if (daysDiff === 1) {
       return `Amanhã às ${format(eventTime, "HH:mm")}`;
@@ -55,13 +73,23 @@ export default function EventDashboard({ events }: EventListProps) {
     if (daysDiff > 1) {
       return `daqui a ${daysDiff} dias`;
     }
-    
-    return format(eventTime, "'as' HH:mm", { locale: ptBR });
+
+    return format(eventTime, "'às' HH:mm", { locale: ptBR });
   };
+
+  const upcomingEvents = [...events]
+    .filter(e => {
+      const eventTime = new Date(e.dateTime + '-03:00');
+      const eventEnd = getEventEnd(e.dateTime);
+      const isHappening = now >= eventTime && now < eventEnd;
+      const isUpcoming = isAfter(eventTime, now);
+      return isHappening || isUpcoming;
+    })
+    .sort((a, b) => new Date(a.dateTime + '-03:00').getTime() - new Date(b.dateTime + '-03:00').getTime())
+    .slice(0, 3);
 
   return (
     <div className="min-h-screen bg-[#F3F4F6]">
-      {/* Banner Header */}
       <div className="bg-[#003366] text-white pt-12 pb-16 px-6">
         <div className="max-w-4xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -72,15 +100,12 @@ export default function EventDashboard({ events }: EventListProps) {
                 Acompanhe a programação completa, palestras e localizações do evento Marista.
               </p>
             </div>
-            <div className="flex flex-col items-center gap-4">
-              {/* Logo placeholder or empty space */}
-            </div>
+            <div className="flex flex-col items-center gap-4" />
           </div>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-6 -mt-10 pb-20">
-        {/* Highlighted Events */}
         {upcomingEvents.length > 0 && (
           <section className="mb-12">
             <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
@@ -88,42 +113,58 @@ export default function EventDashboard({ events }: EventListProps) {
               EM DESTAQUE
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {upcomingEvents.map((event, idx) => (
-                <motion.div
-                  key={event.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.1 }}
-                  className="bg-white rounded-2xl p-6 shadow-xl border border-blue-50 relative overflow-hidden group hover:border-[#EAB308]/30 transition-colors"
-                >
-                  <div className="absolute top-0 right-0 p-3">
-                    <Clock className="w-5 h-5 text-gray-200 group-hover:text-[#EAB308]/20 transition-colors" />
-                  </div>
-                  <div className="text-[10px] uppercase font-bold text-[#EAB308] mb-2 tracking-wider">
-                    {getStatusLabel(event.dateTime, event.location)}
-                  </div>
-                  <h3 className="font-bold text-gray-900 leading-snug mb-3 line-clamp-2">
-                    {event.title}
-                  </h3>
-                  <div className="flex items-start gap-2 text-xs text-gray-500">
-                    <MapPin className="w-3.5 h-3.5 text-[#EAB308] shrink-0 mt-0.5" />
-                    <span className="line-clamp-2">{event.location}</span>
-                  </div>
-                </motion.div>
-              ))}
+              {upcomingEvents.map((event, idx) => {
+                const eventTime = new Date(event.dateTime + '-03:00');
+                const eventEnd = getEventEnd(event.dateTime);
+                const isHappening = now >= eventTime && now < eventEnd;
+
+                return (
+                  <motion.div
+                    key={event.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.1 }}
+                    className={cn(
+                      "bg-white rounded-2xl p-6 shadow-xl border relative overflow-hidden group transition-colors",
+                      isHappening
+                        ? "border-[#EAB308] ring-2 ring-[#EAB308]/40"
+                        : "border-blue-50 hover:border-[#EAB308]/30"
+                    )}
+                  >
+                    {isHappening && (
+                      <div className="absolute top-3 left-3 bg-[#EAB308] text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full">
+                        Acontecendo
+                      </div>
+                    )}
+                    <div className="absolute top-0 right-0 p-3">
+                      <Clock className="w-5 h-5 text-gray-200 group-hover:text-[#EAB308]/20 transition-colors" />
+                    </div>
+                    <div className={cn(
+                      "text-[10px] uppercase font-bold mb-2 tracking-wider",
+                      isHappening ? "text-[#EAB308] mt-4" : "text-[#EAB308]"
+                    )}>
+                      {getStatusLabel(event.dateTime, event.location)}
+                    </div>
+                    <h3 className="font-bold text-gray-900 leading-snug mb-3 line-clamp-2">
+                      {event.title}
+                    </h3>
+                    <div className="flex items-start gap-2 text-xs text-gray-500">
+                      <MapPin className="w-3.5 h-3.5 text-[#EAB308] shrink-0 mt-0.5" />
+                      <span className="line-clamp-2">{event.location}</span>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
           </section>
         )}
 
-        {/* Full Schedule */}
         <section>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <CalendarIcon className="w-5 h-5 text-[#003366]" />
               Cronograma
             </h2>
-            
-            {/* Simple Date Filter */}
             <div className="flex gap-2">
               {availableDates.map(date => (
                 <button
@@ -131,8 +172,8 @@ export default function EventDashboard({ events }: EventListProps) {
                   onClick={() => setSelectedDate(date)}
                   className={cn(
                     "px-4 py-2 rounded-full text-xs font-bold transition-all",
-                    selectedDate === date 
-                      ? "bg-[#003366] text-white shadow-md" 
+                    selectedDate === date
+                      ? "bg-[#003366] text-white shadow-md"
                       : "bg-white text-gray-500 hover:bg-gray-100"
                   )}
                 >
@@ -144,48 +185,65 @@ export default function EventDashboard({ events }: EventListProps) {
 
           <div className="space-y-4">
             <AnimatePresence mode="popLayout">
-              {filteredEvents.map((event, idx) => (
-                <motion.div
-                  key={event.id}
-                  layout
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex gap-4 md:gap-6 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex flex-col items-center justify-center min-w-[70px] border-r border-gray-100 pr-4">
-                    <span className="text-xl font-black text-[#003366]">
-                      {format(parseISO(event.dateTime), "HH:mm")}
-                    </span>
-                    <span className="text-[10px] uppercase font-bold text-gray-400">
-                      {format(parseISO(event.dateTime), "eee", { locale: ptBR })}
-                    </span>
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-bold text-gray-900 truncate">
-                        {event.title}
-                      </h3>
-                    </div>
-                    
-                    {event.speaker && (
-                      <div className="flex items-center gap-1.5 text-sm text-gray-600 mb-2">
-                        <UserIcon className="w-3.5 h-3.5 text-[#EAB308]" />
-                        <span>{event.speaker}</span>
-                      </div>
+              {filteredEvents.map((event, idx) => {
+                const eventTime = new Date(event.dateTime + '-03:00');
+                const eventEnd = getEventEnd(event.dateTime);
+                const isHappening = now >= eventTime && now < eventEnd;
+
+                return (
+                  <motion.div
+                    key={event.id}
+                    layout
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ delay: idx * 0.05 }}
+                    className={cn(
+                      "bg-white rounded-xl p-5 shadow-sm border flex gap-4 md:gap-6 hover:shadow-md transition-shadow",
+                      isHappening
+                        ? "border-[#EAB308] ring-1 ring-[#EAB308]/30"
+                        : "border-gray-100"
                     )}
-                    
-                    <div className="flex items-start gap-1.5 text-sm text-gray-500">
-                      <MapPin className="w-3.5 h-3.5 text-[#EAB308] shrink-0 mt-0.5" />
-                      <span className="leading-tight">{event.location}</span>
+                  >
+                    <div className="flex flex-col items-center justify-center min-w-[70px] border-r border-gray-100 pr-4">
+                      <span className={cn(
+                        "text-xl font-black",
+                        isHappening ? "text-[#EAB308]" : "text-[#003366]"
+                      )}>
+                        {format(eventTime, "HH:mm")}
+                      </span>
+                      <span className="text-[10px] uppercase font-bold text-gray-400">
+                        {format(eventTime, "eee", { locale: ptBR })}
+                      </span>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        {isHappening && (
+                          <span className="w-2 h-2 bg-[#EAB308] rounded-full animate-pulse shrink-0" />
+                        )}
+                        <h3 className="font-bold text-gray-900 truncate">
+                          {event.title}
+                        </h3>
+                      </div>
+
+                      {event.speaker && (
+                        <div className="flex items-center gap-1.5 text-sm text-gray-600 mb-2">
+                          <UserIcon className="w-3.5 h-3.5 text-[#EAB308]" />
+                          <span>{event.speaker}</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-start gap-1.5 text-sm text-gray-500">
+                        <MapPin className="w-3.5 h-3.5 text-[#EAB308] shrink-0 mt-0.5" />
+                        <span className="leading-tight">{event.location}</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
-            
+
             {filteredEvents.length === 0 && (
               <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-200">
                 <CalendarIcon className="w-12 h-12 text-gray-200 mx-auto mb-4" />
@@ -195,8 +253,7 @@ export default function EventDashboard({ events }: EventListProps) {
           </div>
         </section>
       </div>
-      
-      {/* Sticky Footer with Marista Logo */}
+
       <footer className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-100 flex justify-center items-center gap-4 z-50">
         <span className="text-[10px] text-gray-500 font-bold tracking-widest uppercase">
           Encontro de Direções | Regional São Paulo
