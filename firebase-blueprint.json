@@ -1,0 +1,23 @@
+{
+  "entities": {
+    "event": {
+      "title": "Event",
+      "description": "An event in the Marista regional conference",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "speaker": { "type": "string" },
+        "location": { "type": "string" },
+        "dateTime": { "type": "string", "format": "date-time" },
+        "type": { "type": "string", "enum": ["talk", "meal", "break", "activity"] }
+      },
+      "required": ["title", "location", "dateTime"]
+    }
+  },
+  "firestore": {
+    "/events": {
+      "schema": "event",
+      "description": "Collection of conference events"
+    }
+  }
+}
