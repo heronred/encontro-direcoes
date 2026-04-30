@@ -33,7 +33,7 @@ const INITIAL_EVENTS = [
 ];
 
 export async function seedData() {
-  const eventsCol = collection(db, 'events');
+  const eventsCol = collection(db, 'marista_sp_events');
   const existing = await getDocs(query(eventsCol, limit(1)));
   if (existing.empty) {
     console.log("Seeding data...");

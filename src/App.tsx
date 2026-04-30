@@ -5,6 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { fetchEvents } from './services/eventService';
+import { seedData } from './lib/seed';
 import { ConferenceEvent } from './types';
 import EventDashboard from './components/EventDashboard';
 
@@ -13,17 +14,18 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadData() {
+    async function init() {
       try {
+        await seedData();
         const data = await fetchEvents();
         setEvents(data);
       } catch (error) {
-        console.error("Error fetching events:", error);
+        console.error("Initialization error:", error);
       } finally {
         setLoading(false);
       }
     }
-    loadData();
+    init();
   }, []);
 
   if (loading && events.length === 0) {

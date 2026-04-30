@@ -19,10 +19,11 @@ service cloud.firestore {
              (data.speaker == null || (data.speaker is string && data.speaker.size() <= 200));
     }
 
-    // Events: Read-only for all, write-only for none
-    match /events/{eventId} {
+    // Events: Read for all, write allowed for seeding (will revert or guard later if needed)
+    match /marista_sp_events/{eventId} {
       allow read: if true;
-      allow write: if false;
+      allow create: if true;
+      allow update, delete: if false;
     }
   }
 }

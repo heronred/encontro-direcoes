@@ -15,9 +15,9 @@
     }
   },
   "firestore": {
-    "/events": {
+    "/marista_sp_events": {
       "schema": "event",
-      "description": "Collection of conference events"
+      "description": "Collection of Marista SP conference events"
     }
   }
 }

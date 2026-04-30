@@ -73,13 +73,7 @@ export default function EventDashboard({ events }: EventListProps) {
               </p>
             </div>
             <div className="flex flex-col items-center gap-4">
-              <div className="hidden md:block">
-                <img 
-                  src="https://www.marista.org.br/wp-content/themes/marista-brasil/assets/img/logo-marista-brasil-branco.svg" 
-                  alt="Marista Brasil"
-                  className="h-10 opacity-60"
-                />
-              </div>
+              {/* Logo placeholder or empty space */}
             </div>
           </div>
         </div>
@@ -204,10 +198,8 @@ export default function EventDashboard({ events }: EventListProps) {
       
       {/* Sticky Footer with Marista Logo */}
       <footer className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-100 flex justify-center items-center gap-4 z-50">
-
-        <div className="h-4 w-[1px] bg-gray-200" />
-        <span className="text-[10px] text-gray-400 font-bold tracking-widest uppercase">
-          Regional São Paulo
+        <span className="text-[10px] text-gray-500 font-bold tracking-widest uppercase">
+          Encontro de Direções | Regional São Paulo
         </span>
       </footer>
     </div>

@@ -3,7 +3,7 @@ import { db } from '../lib/firebase';
 import { ConferenceEvent, OperationType } from '../types';
 
 export async function fetchEvents(): Promise<ConferenceEvent[]> {
-  const eventsCol = collection(db, 'events');
+  const eventsCol = collection(db, 'marista_sp_events');
   try {
     const q = query(eventsCol, orderBy('dateTime', 'asc'));
     const snapshot = await getDocs(q);
