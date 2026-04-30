@@ -204,11 +204,7 @@ export default function EventDashboard({ events }: EventListProps) {
       
       {/* Sticky Footer with Marista Logo */}
       <footer className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-100 flex justify-center items-center gap-4 z-50">
-        <img 
-          src="https://www.marista.org.br/wp-content/themes/marista-brasil/assets/img/logo-marista-brasil-azul.svg" 
-          alt="Marista Brasil"
-          className="h-8"
-        />
+
         <div className="h-4 w-[1px] bg-gray-200" />
         <span className="text-[10px] text-gray-400 font-bold tracking-widest uppercase">
           Regional São Paulo
