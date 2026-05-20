@@ -53,29 +53,38 @@ export default function EventDashboard({ events }: EventListProps) {
     return end;
   };
 
-  const getStatusLabel = (dateTime: string, location: string) => {
-    const eventTime = new Date(dateTime + '-03:00');
-    const eventEnd = getEventEnd(dateTime);
-    const diffInMinutes = (eventTime.getTime() - now.getTime()) / 60000;
-    const isHappening = now >= eventTime && now < eventEnd;
+const getStatusLabel = (dateTime: string, location: string) => {
+  const eventTime = new Date(dateTime + '-03:00');
+  const eventEnd = getEventEnd(dateTime);
+  const diffInMinutes = (eventTime.getTime() - now.getTime()) / 60000;
+  const isHappening = now >= eventTime && now < eventEnd;
 
-    if (isHappening) {
-      return `Agora no ${location}`;
-    }
-    if (diffInMinutes > 0 && diffInMinutes <= 60) {
-      return `Em ${Math.round(diffInMinutes)} minutos`;
-    }
+  if (isHappening) {
+    return `Agora no ${location}`;
+  }
+  if (diffInMinutes > 0 && diffInMinutes <= 60) {
+    return `Em ${Math.round(diffInMinutes)} minutos`;
+  }
 
-    const daysDiff = Math.ceil(diffInMinutes / (60 * 24));
-    if (daysDiff === 1) {
-      return `Amanhã às ${format(eventTime, "HH:mm")}`;
-    }
-    if (daysDiff > 1) {
-      return `daqui a ${daysDiff} dias`;
-    }
+  // ✅ Correção: comparar datas de calendário, não dividir minutos
+  const eventDateStr = dateTime.split('T')[0];
+  const nowSPStr = now.toISOString().split('T')[0]; // já está ajustado para SP
+  
+  const eventDate = new Date(eventDateStr + 'T00:00:00');
+  const todayDate = new Date(nowSPStr + 'T00:00:00');
+  const daysDiff = Math.round(
+    (eventDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24)
+  );
 
-    return format(eventTime, "'às' HH:mm", { locale: ptBR });
-  };
+  if (daysDiff === 1) {
+    return `Amanhã às ${format(eventTime, "HH:mm")}`;
+  }
+  if (daysDiff > 1) {
+    return `daqui a ${daysDiff} dias`;
+  }
+
+  return format(eventTime, "'às' HH:mm", { locale: ptBR });
+};
 
   const upcomingEvents = [...events]
     .filter(e => {
